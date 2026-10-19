@@ -6,8 +6,9 @@ verified launchers, and recoverable control-file publication.
 
 Linux and macOS share POSIX file locks. Process ownership uses kernel birth time,
 executable identity and boot identity (`/proc` on Linux, `libproc` on macOS), so a reused
-PID never grants authority. macOS support is implemented and covered by the CI matrix;
-physical MacBook backend qualification belongs to the consuming tool.
+PID never grants authority. macOS support is implemented with native and simulated process-identity tests.
+A Linux/macOS CI matrix is prepared locally; publishing it requires GitHub `workflow`
+permission. Physical MacBook backend qualification belongs to the consuming tool.
 
 ## Generate a tool
 
