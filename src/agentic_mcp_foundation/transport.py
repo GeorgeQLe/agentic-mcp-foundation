@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import secrets
+import socketserver
 import subprocess
 import threading
 import time
@@ -14,6 +15,16 @@ from pathlib import Path
 import httpx
 
 from . import PROTOCOL_VERSION, LifecycleError
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self):
+        # HTTPServer.server_bind reverse-resolves the address with socket.getfqdn,
+        # which can stall for 30+ seconds on macOS; a loopback server never needs it.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 def atomic_json(path: Path, value):
@@ -206,8 +217,7 @@ def serve(directory, identity, dispatch, on_close):
                 except (BrokenPipeError, ConnectionResetError):
                     pass  # The coordinator retains the job after a client disconnects.
 
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        server.daemon_threads = True
+        server = LoopbackServer(("127.0.0.1", 0), Handler)
         endpoint = {
             "protocol": PROTOCOL_VERSION,
             "port": server.server_port,

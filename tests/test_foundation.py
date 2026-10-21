@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import time
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 from mcp import ClientSession, StdioServerParameters
@@ -14,7 +15,7 @@ from mcp.client.stdio import stdio_client
 from agentic_mcp_foundation import LifecycleError, launcher, processes, publication
 from agentic_mcp_foundation.jobs import JobEngine, JobStore
 from agentic_mcp_foundation.scaffold import scaffold
-from agentic_mcp_foundation.transport import atomic_json
+from agentic_mcp_foundation.transport import LoopbackServer, atomic_json
 
 
 def finished(store, job):
@@ -311,3 +312,16 @@ def test_darwin_identity_uses_kernel_birth_time_and_rejects_unverifiable_process
     state.update(pid=123, readable=False)
     with pytest.raises(ProcessLookupError):
         processes.identity(123)
+
+
+def test_loopback_server_never_reverse_resolves(monkeypatch):
+    def stalled(*_):
+        raise AssertionError("getfqdn stalls for 30+ seconds on some macOS hosts")
+
+    monkeypatch.setattr("socket.getfqdn", stalled)
+    server = LoopbackServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+    try:
+        assert server.server_port > 0
+        assert server.daemon_threads
+    finally:
+        server.server_close()
